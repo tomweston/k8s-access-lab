@@ -1,19 +1,46 @@
 #!/bin/bash
 set -e
 
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 CP_VM="cp-1"
 WORKER_VMS=("worker-1" "worker-2")
 K8S_VERSION="v1.32"
 
-# Provision VMs
-for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
-    multipass launch 22.04 --name $vm --cpus 2 --memory 2G --disk 5G || true
+log_step() {
+    echo -e "\n${BLUE}=== $1 ===${NC}"
+}
+
+log_info() {
+    echo -e "${GREEN}➜ $1${NC}"
+}
+
+log_warn() {
+    echo -e "${YELLOW}➜ $1${NC}"
+}
+
+# 1. Provision VMs
+log_step "Provisioning Virtual Machines"
+log_info "Launching Control Plane ($CP_VM)..."
+multipass launch 22.04 --name $CP_VM --cpus 2 --memory 2G --disk 5G 2>/dev/null || log_warn "$CP_VM already exists"
+
+for vm in "${WORKER_VMS[@]}"; do
+    log_info "Launching Worker ($vm)..."
+    multipass launch 22.04 --name $vm --cpus 1 --memory 1.5G --disk 5G 2>/dev/null || log_warn "$vm already exists"
 done
 
-# Configure all VMs
+# 2. Configure VMs
+log_step "Configuring Nodes (Containerd + Kubeadm)"
 for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
-    multipass exec $vm -- env K8S_VERSION="$K8S_VERSION" bash -s <<'EOF'
+    log_info "Setting up dependencies on $vm..."
+    multipass exec $vm -- env K8S_VERSION="$K8S_VERSION" bash -s <<'EOF' >/dev/null 2>&1
+        export DEBIAN_FRONTEND=noninteractive
         export K8S_VERSION="$K8S_VERSION"
+        
         # Install containerd
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes --batch -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
@@ -37,20 +64,31 @@ for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
 EOF
 done
 
-# Initialize cluster
+# 3. Initialize Cluster
+log_step "Initializing Control Plane"
 CP_IP=$(multipass info $CP_VM | grep IPv4 | awk '{print $2}')
-multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap
+log_info "Control Plane IP: $CP_IP"
 
-# Get kubeconfig
+log_info "Running kubeadm init..."
+multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap >/dev/null 2>&1
+
+# 4. Get Kubeconfig
+log_step "Retrieving Kubeconfig"
 mkdir -p ../../kubeconfig
 multipass exec $CP_VM -- sudo cat /etc/kubernetes/admin.conf > ../../kubeconfig/admin.yaml
 export KUBECONFIG=$(pwd)/../../kubeconfig/admin.yaml
 chmod 600 ../../kubeconfig/admin.yaml
+log_info "Saved to kubeconfig/admin.yaml"
 
-# Join workers
+# 5. Join Workers
+log_step "Joining Workers to Cluster"
 JOIN_CMD=$(multipass exec $CP_VM -- sudo kubeadm token create --print-join-command)
+
 for vm in "${WORKER_VMS[@]}"; do
-    multipass exec $vm -- sudo $JOIN_CMD
+    log_info "Joining $vm..."
+    multipass exec $vm -- sudo $JOIN_CMD >/dev/null 2>&1
 done
 
-kubectl get nodes
+# 6. Verify
+log_step "Cluster Status"
+kubectl get nodes -o wide

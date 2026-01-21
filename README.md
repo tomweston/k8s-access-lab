@@ -15,6 +15,11 @@ Ensure you have the following installed:
 - [**ngrok**](https://ngrok.com/download) - Public ingress tunnel
 - [**Go 1.21+**](https://go.dev/doc/install) - Backend language
 
+**System Requirements:**
+- **RAM:** 5GB (CP: 2GB, Workers: 1.5GB)
+- **CPU:** 4 Cores (CP: 2, Workers: 1)
+- **Disk:** ~15GB (3 VMs x 5GB)
+
 **Install Prerequisites:**
 ```bash
 make deps
