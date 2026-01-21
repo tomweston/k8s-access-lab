@@ -70,3 +70,8 @@ Clean up resources in reverse order to ensure clean deletion.
 ```bash
 make clean
 ```
+
+## Author
+
+[![LinkedIn](https://img.shields.io/badge/linkedin-%230077B5.svg?&style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/westontom)
+[![Twitter](https://img.shields.io/badge/@tomweston-%231DA1F2.svg?&style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/tomweston)
