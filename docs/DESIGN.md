@@ -49,10 +49,10 @@ Access is strictly scoped using Role-Based Access Control:
 * **Automation:** The entire identity lifecycle—from key generation to kubeconfig creation—is codified. This eliminates the "human error" of manually running `openssl` commands.
 
 ### Cons & "Issues with this style of management"
-* **Revocation Difficulty:** The biggest drawback of X.509 client certs is that they are hard to revoke. If the `nginx-deployer` laptop is stolen, the certificate remains valid until it expires. Kubernetes does not have a built-in, easy-to-use CRL/OCSP responder for the API server.
-    * *Alternative:* OIDC (OpenID Connect) with short-lived tokens is preferred in production.
-* **Rotation Complexity:** Rotating these certificates requires a full re-run of the generation process and distribution of the new kubeconfig file to the user.
-* **Lack of Identity Centralization:** This approach creates "silos" of users defined only within the cluster. It does not map to an employee's actual status (e.g., if they leave the company, their AD account is disabled, but this cert might still work).
+* **Revocation Difficulty:** Hard to revoke quickly without CRL/OCSP support.
+* **Rotation Complexity:** Rotation requires regenerating and redistributing kubeconfigs.
+* **Identity Drift:** Not tied to a central identity source, so access can persist.
+* **Alternative:** OIDC with short-lived tokens is preferred in production.
 
 ### Deployment Strategy: Push (Pulumi) vs. GitOps
 * **Current Approach (Push):** We use Pulumi to push changes.
