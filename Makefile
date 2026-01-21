@@ -56,5 +56,7 @@ clean:
 	-cd apps/nginx && pulumi destroy --yes
 	@echo "Destroying Admin Stack..."
 	-cd infra/admin && pulumi destroy --yes
+	@# Note: cert-manager CRDs (customresourcedefinitions) are preserved by Helm to prevent data loss.
+	@# This causes a warning during destroy, but they will be fully removed when the VMs are deleted below.
 	@echo "Cleaning up Infrastructure..."
 	./infra/scripts/teardown.sh
