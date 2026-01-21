@@ -77,8 +77,10 @@ configuration in Step 5, and follow Verify Option B to start the ngrok tunnel.
 <details>
 <summary>4. Bootstrap Restricted User</summary>
 
-The admin stack now generates and approves the `nginx-deployer` certificate,
-and exports a kubeconfig for the restricted user. Capture it after `pulumi up`:
+The admin stack installs core platform components (Flannel, ingress-nginx,
+cert-manager, RBAC, and the ClusterIssuer). It also generates and approves the
+`nginx-deployer` certificate and exports a kubeconfig for the restricted user.
+Capture it after `pulumi up`:
 
 ```bash
 # Run from the repo root
