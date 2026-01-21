@@ -6,13 +6,13 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
+	apiextensions "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/apiextensions"
 	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	helmv3 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
 	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
@@ -228,9 +228,16 @@ func main() {
 		}
 
 		issuerOpts := append(opts, pulumi.DependsOn([]pulumi.Resource{certManagerRelease, ingressRelease}))
-		_, err = k8syaml.NewConfigGroup(ctx, "self-signed-issuer", &k8syaml.ConfigGroupArgs{
-			YAML: []string{
-				"apiVersion: cert-manager.io/v1\nkind: ClusterIssuer\nmetadata:\n  name: self-signed-issuer\nspec:\n  selfSigned: {}\n",
+		_, err = apiextensions.NewCustomResource(ctx, "self-signed-issuer", &apiextensions.CustomResourceArgs{
+			ApiVersion: pulumi.String("cert-manager.io/v1"),
+			Kind:       pulumi.String("ClusterIssuer"),
+			Metadata: &metav1.ObjectMetaArgs{
+				Name: pulumi.String("self-signed-issuer"),
+			},
+			OtherFields: kubernetes.UntypedArgs{
+				"spec": map[string]interface{}{
+					"selfSigned": map[string]interface{}{},
+				},
 			},
 		}, issuerOpts...)
 		if err != nil {
@@ -299,30 +306,26 @@ func main() {
 		clusterName := adminCfg.Contexts[adminCfg.CurrentContext].Cluster
 		cluster := adminCfg.Clusters[clusterName]
 		server := cluster.Server
-		caData := base64.StdEncoding.EncodeToString(cluster.CertificateAuthorityData)
-		userCert := base64.StdEncoding.EncodeToString(certBytes)
-		userKey := base64.StdEncoding.EncodeToString(keyPEM)
-
-		nginxKubeconfig := fmt.Sprintf(`apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    certificate-authority-data: %s
-    server: %s
-  name: %s
-users:
-- name: nginx-deployer
-  user:
-    client-certificate-data: %s
-    client-key-data: %s
-contexts:
-- context:
-    cluster: %s
-    namespace: app-nginx
-    user: nginx-deployer
-  name: nginx-deployer-context
-current-context: nginx-deployer-context
-`, caData, server, clusterName, userCert, userKey, clusterName)
+		kubeConfig := clientcmdapi.NewConfig()
+		kubeConfig.Clusters[clusterName] = &clientcmdapi.Cluster{
+			Server:                   server,
+			CertificateAuthorityData: cluster.CertificateAuthorityData,
+		}
+		kubeConfig.AuthInfos["nginx-deployer"] = &clientcmdapi.AuthInfo{
+			ClientCertificateData: certBytes,
+			ClientKeyData:         keyPEM,
+		}
+		kubeConfig.Contexts["nginx-deployer-context"] = &clientcmdapi.Context{
+			Cluster:   clusterName,
+			AuthInfo:  "nginx-deployer",
+			Namespace: "app-nginx",
+		}
+		kubeConfig.CurrentContext = "nginx-deployer-context"
+		kubeconfigBytes, err := clientcmd.Write(*kubeConfig)
+		if err != nil {
+			return err
+		}
+		nginxKubeconfig := string(kubeconfigBytes)
 
 		ctx.Export("namespace", ns.Metadata.Name())
 		ctx.Export("nginxDeployerKubeconfig", pulumi.ToSecret(pulumi.String(nginxKubeconfig)))
