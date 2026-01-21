@@ -23,7 +23,7 @@ This project prioritizes a realistic, "bare-metal" simulation over the convenien
 ## Quick Start
 
 <details>
-<summary>1. Setup Infrastructure (`infra/scripts/setup.sh`)</summary>
+<summary>1. Setup Infrastructure</summary>
 
 This script handles the physical infrastructure: provisioning VMs, installing Containerd/Kubeadm, initializing the cluster, and joining workers.
 
@@ -42,7 +42,7 @@ cd ../..
 </details>
 
 <details>
-<summary>2. Admin Stack (Pulumi)</summary>
+<summary>2. Admin Stack</summary>
 
 This stack creates the namespace, RBAC, and the cert-manager ClusterIssuer using admin credentials:
 
@@ -63,7 +63,7 @@ cd ../..
 </details>
 
 <details>
-<summary>3. Optional: Use ngrok Hostname (No /etc/hosts)</summary>
+<summary>3. Use ngrok Hostname</summary>
 
 If you do not want to edit your local hosts file, you can use an ngrok
 hostname and set the app stack `host` to that value. This gives you a
@@ -75,7 +75,7 @@ configuration in Step 5, and follow Verify Option B to start the ngrok tunnel.
 </details>
 
 <details>
-<summary>4. Bootstrap Restricted User (Pulumi Output)</summary>
+<summary>4. Bootstrap Restricted User</summary>
 
 The admin stack now generates and approves the `nginx-deployer` certificate,
 and exports a kubeconfig for the restricted user. Capture it after `pulumi up`:
@@ -90,7 +90,7 @@ cd ../..
 </details>
 
 <details>
-<summary>5. App Stack (Pulumi)</summary>
+<summary>5. App Stack</summary>
 
 This stack deploys the application using the **restricted user kubeconfig** generated in the previous step:
 
@@ -118,31 +118,6 @@ cd ../..
 
 <details>
 <summary>6. Verify</summary>
-
-**Option A: Local Access (via Control Plane IP)**
-
-Access the application via the Control Plane IP (since we use NodePort via Ingress Controller).
-
-```bash
-# Run from the repo root
-cd ../..
-
-# Get Control Plane IP
-IP=$(multipass info cp-1 | grep IPv4 | awk '{print $2}')
-
-# Get NodePort (dynamic service name)
-export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
-INGRESS_SVC=$(kubectl get svc -n ingress-nginx \
-  -l app.kubernetes.io/component=controller,app.kubernetes.io/name=ingress-nginx \
-  -o jsonpath='{.items[0].metadata.name}')
-NODEPORT=$(kubectl get svc -n ingress-nginx "$INGRESS_SVC" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
-
-# Test with Host Header (match your deployment host)
-HOST=abc123.ngrok-free.app
-curl -H "Host: $HOST" http://$IP:$NODEPORT
-```
-
-**Option B: Expose via ngrok (for remote access)**
 
 Expose your cluster to the internet using ngrok:
 
@@ -180,7 +155,7 @@ cd ../..
 </details>
 
 <details>
-<summary>Admin Stack Cleanup (Cert-Manager CRDs + Webhooks)</summary>
+<summary>Admin Stack Cleanup</summary>
 
 When destroying the admin stack, Helm intentionally preserves cert-manager
 CRDs. In some cases, the old webhook configs can also linger. If you want a
