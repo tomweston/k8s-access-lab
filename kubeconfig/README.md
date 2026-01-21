@@ -12,7 +12,7 @@ After running `infra/scripts/setup.sh`, this directory should contain:
     *   Used by the `infra/admin` Pulumi stack.
     *   Used for troubleshooting and initial setup.
 
-After following the "Bootstrap Restricted User" steps in the main README, this directory should also contain:
+After running the admin stack and exporting the output kubeconfig (see "Bootstrap Restricted User" in the main README), this directory should also contain:
 
 *   **`nginx-deployer.yaml`**: The restricted user credentials.
     *   Used by the `apps/nginx` Pulumi stack.
