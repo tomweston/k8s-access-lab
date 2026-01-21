@@ -1,0 +1,3 @@
+name: k8s-access-lab-admin
+runtime: go
+description: Admin stack for namespace, RBAC, and cert-manager issuer

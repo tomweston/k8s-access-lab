@@ -1,0 +1,55 @@
+# Pulumi
+.pulumi/
+**/Pulumi.*.yaml
+!Pulumi.yaml
+!Pulumi.*.example.yaml
+# Allow our specific config files if we wanted to commit them, 
+# but generally we don't commit configs with secrets. 
+# For this lab, we are committing the structure but ignoring the actual generated kubeconfigs.
+
+# Node modules
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes Configs (Root)
+*.kubeconfig
+admin.conf
+
+# Generated Kubeconfigs (Directory)
+kubeconfig/*
+!kubeconfig/README.md
+
+# CSR / Certs
+*.key
+*.crt
+*.csr
+csr/
+
+# Go
+go.work.sum
+
+# VM artifacts
+*.log
+vm-ips.txt
+
+# Temporary files
+*.tmp
+*.bak
+
+challenge.md
+
+.cursor/
+
+docs

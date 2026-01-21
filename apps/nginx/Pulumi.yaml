@@ -1,0 +1,3 @@
+name: k8s-access-lab-pulumi
+runtime: go
+description: Deploy the Nginx app using Pulumi Go and the Kubernetes provider
