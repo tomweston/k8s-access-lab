@@ -13,9 +13,15 @@ Prereqs: `multipass`, `kubectl`, `ngrok`, `pulumi`, Go 1.21+
 Provisions the VMs, installs kubeadm/containerd, and bootstraps the cluster.
 ```bash
 # Create VMs and bootstrap kubeadm
-cd infra/scripts
-./setup.sh
-cd ../..
+chmod +x infra/scripts/setup.sh
+./infra/scripts/setup.sh
+```
+
+```bash
+# Check VMs and node status
+multipass list
+export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
+kubectl get nodes
 ```
 
 ### 2. Admin Stack
@@ -67,19 +73,16 @@ ngrok http https://$IP:$NODEPORT --host-header="$HOST"
 ## Teardown
 
 ```bash
-cd infra/scripts
-./teardown.sh
+# Remove app stack
+cd apps/nginx
+pulumi destroy
 cd ../..
+
+# Remove admin stack
+cd infra/admin
+pulumi destroy
+cd ../..
+
+# Remove VMs and local kubeconfigs
+./infra/scripts/teardown.sh
 ```
-
-## Admin Cleanup (only if re-running)
-
-```bash
-export KUBECONFIG=/Users/tom/src/github.com/tomweston/k8s-access-lab/kubeconfig/admin.yaml
-kubectl delete validatingwebhookconfiguration -l app.kubernetes.io/name=cert-manager 2>/dev/null || true
-kubectl delete mutatingwebhookconfiguration -l app.kubernetes.io/name=cert-manager 2>/dev/null || true
-kubectl delete crd certificaterequests.cert-manager.io certificates.cert-manager.io \
-  challenges.acme.cert-manager.io clusterissuers.cert-manager.io \
-  issuers.cert-manager.io orders.acme.cert-manager.io
-```
-
