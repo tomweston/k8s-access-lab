@@ -15,7 +15,7 @@ Ensure you have the following installed:
 - [**ngrok**](https://ngrok.com/download) - Public ingress tunnel
 - [**Go 1.21+**](https://go.dev/doc/install) - Backend language
 
-**macOS Users:**
+**Install Prerequisites:**
 ```bash
 make deps
 ```

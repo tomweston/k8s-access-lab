@@ -5,8 +5,17 @@ all: deps infra admin app
 
 # 0. Prerequisites
 deps:
-	@echo "Installing dependencies via Homebrew..."
-	brew bundle
+	@if command -v brew >/dev/null 2>&1; then \
+		echo "Homebrew detected. Installing dependencies..."; \
+		brew bundle; \
+	else \
+		echo "Homebrew not found. Please install the following manually:"; \
+		echo "  - multipass: https://multipass.run/install"; \
+		echo "  - kubectl:   https://kubernetes.io/docs/tasks/tools/"; \
+		echo "  - pulumi:    https://www.pulumi.com/docs/get-started/install/"; \
+		echo "  - ngrok:     https://ngrok.com/download"; \
+		echo "  - go:        https://go.dev/doc/install"; \
+	fi
 
 # 1. Infrastructure (VMs + K8s)
 infra:
