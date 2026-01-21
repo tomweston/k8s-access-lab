@@ -1,88 +1,102 @@
 # Kubernetes Access Lab
 
-Secure Nginx deployment on a kubeadm cluster using Pulumi and a restricted user.
+Secure Nginx deployment on a `kubeadm` cluster using Pulumi and a restricted user.
 
-Docs: [Design Document & Tradeoffs](docs/DESIGN.md)
+[Design Document & Tradeoffs](docs/DESIGN.md) | [Prerequisites](#prerequisites) | [Quick Start](#quick-start) | [Teardown](#teardown)
 
-Prereqs: `multipass`, `kubectl`, `ngrok`, `pulumi`, Go 1.21+
+---
+
+## Architecture Overview
+
+This lab demonstrates a three-layer security model, transitioning from full cluster administration to restricted application deployment.
+
+| Layer | Component | Responsibility |
+| :--- | :--- | :--- |
+| **1. Infra** | `multipass` + `kubeadm` | Provisions Ubuntu VMs and bootstraps the Kubernetes control plane. |
+| **2. Admin** | Pulumi (Admin Stack) | Installs platform services (CNI, Ingress, Cert-Manager) and handles RBAC/CSR bootstrapping. |
+| **3. App** | Pulumi (App Stack) | Deploys the Nginx workload using a **restricted** kubeconfig with namespace-scoped permissions. |
+
+```mermaid
+graph TD
+    A[Multipass VMs] --> B[Kubeadm Cluster]
+    B --> C[Admin Stack: RBAC + Platform]
+    C --> D[Restricted Kubeconfig]
+    D --> E[App Stack: Nginx]
+```
+
+---
+
+## Prerequisites
+
+Ensure you have the following installed:
+- **CLI Tools:** `multipass`, `kubectl`, `pulumi`, `ngrok`
+- **Language:** Go 1.21+
+
+---
 
 ## Quick Start
 
-### 1. Infra
+### 1. Provision Cluster
+Initialize the virtual machines and bootstrap the `kubeadm` cluster.
 
-Provisions the VMs, installs kubeadm/containerd, and bootstraps the cluster.
 ```bash
-# Create VMs and bootstrap kubeadm
 chmod +x infra/scripts/setup.sh
 ./infra/scripts/setup.sh
-```
 
-```bash
-# Check VMs and node status
-multipass list
+# Verify nodes are ready
 export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
 kubectl get nodes
 ```
 
-### 2. Admin Stack
+### 2. Bootstrap Admin Layer
+Deploy core platform components and generate the restricted deployer credentials.
 
-Installs Flannel, ingress-nginx, cert-manager, RBAC, and exports a restricted kubeconfig.
 ```bash
-# Use admin kubeconfig to install platform components
 cd infra/admin
-pulumi org set-default <name-of-org>
 pulumi stack init admin
 pulumi config set kubeconfig ../../kubeconfig/admin.yaml
-pulumi up
-# Export the restricted kubeconfig for the app stack
+pulumi up --yes
+
+# Extract the restricted kubeconfig for the next layer
 pulumi stack output nginxDeployerKubeconfig --show-secrets > ../../kubeconfig/nginx-deployer.yaml
-cd ../..
 ```
 
-### 3. App Stack
+### 3. Deploy Application
+Using the **restricted** credentials, deploy the Nginx application.
 
-Deploys the Nginx app using the restricted kubeconfig and ngrok host.
 ```bash
-# Deploy the app using the restricted kubeconfig and ngrok host
-cd apps/nginx
-pulumi org set-default <name-of-org>
+cd ../../apps/nginx
 pulumi stack init app
 pulumi config set kubeconfig ../../kubeconfig/nginx-deployer.yaml
-# Set your ngrok hostname (no https://)
-pulumi config set host abc123.ngrok-free.app
+pulumi config set host <your-host>.ngrok-free.app
 pulumi config set sslRedirect false
-pulumi up
-cd ../..
+pulumi up --yes
 ```
 
-### 4. Verify (ngrok)
+### 4. Access via ngrok
+Expose the ingress controller to the internet to verify the deployment.
 
-Starts the ngrok tunnel to the ingress NodePort for access.
 ```bash
-# Get the control plane IP and ingress NodePort
-IP=$(multipass info cp-1 | grep IPv4 | awk '{print $2}')
-INGRESS_SVC=$(kubectl get svc -n ingress-nginx \
-  -l app.kubernetes.io/component=controller,app.kubernetes.io/name=ingress-nginx \
-  -o jsonpath='{.items[0].metadata.name}')
-NODEPORT=$(kubectl get svc -n ingress-nginx "$INGRESS_SVC" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
-# Start ngrok using the same host as the ingress
-HOST=abc123.ngrok-free.app
-ngrok http https://$IP:$NODEPORT --host-header="$HOST"
+# Fetch connection details
+IP=$(multipass info cp-1 | grep IPv4 | awk '{print $2}') && PORT=$(kubectl get svc -n ingress-nginx -l app.kubernetes.io/component=controller -o jsonpath='{.items[0].spec.ports[?(@.port==80)].nodePort}')
+
+# Start the tunnel
+ngrok http https://$IP:$PORT --host-header="<your-host>.ngrok-free.app"
 ```
+
+---
 
 ## Teardown
 
+Clean up resources in reverse order to ensure clean deletion.
+
 ```bash
-# Remove app stack
-cd apps/nginx
-pulumi destroy
-cd ../..
+# 1. Remove App Stack
+cd apps/nginx && pulumi destroy --yes
 
-# Remove admin stack
-cd infra/admin
-pulumi destroy
-cd ../..
+# 2. Remove Admin Stack
+cd ../../infra/admin && pulumi destroy --yes
 
-# Remove VMs and local kubeconfigs
-./infra/scripts/teardown.sh
+# 3. Clean up VMs and Local Configs
+cd ../.. && ./infra/scripts/teardown.sh
 ```
