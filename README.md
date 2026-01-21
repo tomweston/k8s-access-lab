@@ -16,14 +16,14 @@ This project prioritizes a realistic, "bare-metal" simulation over the convenien
 ## Prerequisites
 
 *   **Multipass**: `brew install multipass`
-*   **kubectl**: `brew install kubectl` (optional, for convenience)
-*   **openssl**: (Usually pre-installed)
-*   **ngrok**: `brew install ngrok` (optional, for remote access)
-*   **Pulumi + Go**: `brew install pulumi`, Go 1.21+ (Required for the standard deployment path)
+*   **kubectl**: `brew install kubectl`
+*   **ngrok**: `brew install ngrok` 
+*   **Pulumi + Go**: `brew install pulumi`, 
 
 ## Quick Start
 
-### 1. Setup Infrastructure (`infra/scripts/setup.sh`)
+<details>
+<summary>1. Setup Infrastructure (`infra/scripts/setup.sh`)</summary>
 
 This script handles the physical infrastructure: provisioning VMs, installing Containerd/Kubeadm, initializing the cluster, and joining workers.
 
@@ -39,7 +39,10 @@ cd ../..
 - Creates `kubeconfig/admin.yaml` (Admin Kubeconfig) in the repo root
 - Displays Cluster Nodes (Note: Nodes will be `NotReady` until Pulumi Admin stack runs)
 
-### 2. Admin Stack (Pulumi)
+</details>
+
+<details>
+<summary>2. Admin Stack (Pulumi)</summary>
 
 This stack creates the namespace, RBAC, and the cert-manager ClusterIssuer using admin credentials:
 
@@ -57,34 +60,22 @@ cd ../..
 - **Platform**: Ingress-Nginx Controller, Cert-Manager
 - **Config**: Namespace `app-nginx`, RBAC role/binding for `nginx-deployer`, ClusterIssuer
 
-### 3. Optional: Use ngrok Hostname (No /etc/hosts)
+</details>
+
+<details>
+<summary>3. Optional: Use ngrok Hostname (No /etc/hosts)</summary>
 
 If you do not want to edit your local hosts file, you can use an ngrok
 hostname and set the app stack `host` to that value. This gives you a
 public URL that matches the Ingress host.
 
-```bash
-# Run from the repo root
-cd ../..
-
-# Get Control Plane IP
-IP=$(multipass info cp-1 | grep IPv4 | awk '{print $2}')
-
-# Get NodePort (dynamic service name)
-export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
-INGRESS_SVC=$(kubectl get svc -n ingress-nginx \
-  -l app.kubernetes.io/component=controller,app.kubernetes.io/name=ingress-nginx \
-  -o jsonpath='{.items[0].metadata.name}')
-NODEPORT=$(kubectl get svc -n ingress-nginx "$INGRESS_SVC" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
-
-# Start ngrok (copy the generated hostname, e.g. https://abc123.ngrok-free.app)
-ngrok http http://$IP:$NODEPORT
-```
-
 Use the ngrok hostname (without https://) as the `host` in the app stack
-configuration in Step 5.
+configuration in Step 5, and follow Verify Option B to start the ngrok tunnel.
 
-### 4. Bootstrap Restricted User (Pulumi Output)
+</details>
+
+<details>
+<summary>4. Bootstrap Restricted User (Pulumi Output)</summary>
 
 The admin stack now generates and approves the `nginx-deployer` certificate,
 and exports a kubeconfig for the restricted user. Capture it after `pulumi up`:
@@ -96,7 +87,10 @@ pulumi stack output nginxDeployerKubeconfig --show-secrets > ../../kubeconfig/ng
 cd ../..
 ```
 
-### 5. App Stack (Pulumi)
+</details>
+
+<details>
+<summary>5. App Stack (Pulumi)</summary>
 
 This stack deploys the application using the **restricted user kubeconfig** generated in the previous step:
 
@@ -108,7 +102,7 @@ pulumi stack init app
 pulumi config set kubeconfig ../../kubeconfig/nginx-deployer.yaml
 # If using ngrok, replace with your ngrok hostname (no https:// prefix)
 # Example: pulumi config set host abc123.ngrok-free.app
-pulumi config set host nginx.example.com
+pulumi config set host abc123.ngrok-free.app
 pulumi config set sslRedirect false
 pulumi up
 cd ../..
@@ -120,7 +114,10 @@ cd ../..
 - Service `nginx`
 - Ingress `nginx` (TLS via cert-manager)
 
-### 6. Verify
+</details>
+
+<details>
+<summary>6. Verify</summary>
 
 **Option A: Local Access (via Control Plane IP)**
 
@@ -141,7 +138,8 @@ INGRESS_SVC=$(kubectl get svc -n ingress-nginx \
 NODEPORT=$(kubectl get svc -n ingress-nginx "$INGRESS_SVC" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
 
 # Test with Host Header (match your deployment host)
-curl -H "Host: nginx.example.com" http://$IP:$NODEPORT
+HOST=abc123.ngrok-free.app
+curl -H "Host: $HOST" http://$IP:$NODEPORT
 ```
 
 **Option B: Expose via ngrok (for remote access)**
@@ -161,11 +159,15 @@ INGRESS_SVC=$(kubectl get svc -n ingress-nginx \
   -o jsonpath='{.items[0].metadata.name}')
 NODEPORT=$(kubectl get svc -n ingress-nginx "$INGRESS_SVC" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
 
-# Start ngrok
-ngrok http https://$IP:$NODEPORT --host-header=nginx.example.com
+# Start ngrok (match your deployment host)
+HOST=abc123.ngrok-free.app
+ngrok http https://$IP:$NODEPORT --host-header="$HOST"
 ```
 
-### 7. Teardown
+</details>
+
+<details>
+<summary>7. Teardown</summary>
 
 To delete all VMs and config files:
 
@@ -175,7 +177,10 @@ cd infra/scripts
 cd ../..
 ```
 
-### Admin Stack Cleanup (Cert-Manager CRDs + Webhooks)
+</details>
+
+<details>
+<summary>Admin Stack Cleanup (Cert-Manager CRDs + Webhooks)</summary>
 
 When destroying the admin stack, Helm intentionally preserves cert-manager
 CRDs. In some cases, the old webhook configs can also linger. If you want a
@@ -194,6 +199,8 @@ kubectl delete crd certificaterequests.cert-manager.io certificates.cert-manager
   challenges.acme.cert-manager.io clusterissuers.cert-manager.io \
   issuers.cert-manager.io orders.acme.cert-manager.io
 ```
+
+</details>
 
 ## Project Structure
 
