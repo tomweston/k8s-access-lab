@@ -26,9 +26,17 @@ Kubernetes needs a runtime to launch containers. We use `containerd`.
 ```bash
 multipass exec $VM -- sudo bash -c '
   # Install dependencies
+  apt-get update && apt-get install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
+
+  # Add Docker repo
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  
   apt-get update && apt-get install -y containerd.io
 
   # Generate default config
+  mkdir -p /etc/containerd
   containerd config default > /etc/containerd/config.toml
 
   # Enable Systemd Cgroups
@@ -74,6 +82,8 @@ multipass exec $VM -- sudo bash -c '
 '
 ```
 
+Repeat the above for each VM 
+
 ## 3. Bootstrap Control Plane (Run on `cp-1`)
 Initialize the master node.
 
@@ -96,8 +106,8 @@ Connect the worker nodes to the cluster.
 JOIN_CMD=$(multipass exec cp-1 -- sudo kubeadm token create --print-join-command)
 
 # 2. Run it on the workers
-multipass exec worker-1 -- sudo $JOIN_CMD
-multipass exec worker-2 -- sudo $JOIN_CMD
+multipass exec worker-1 -- sudo bash -c "$JOIN_CMD"
+multipass exec worker-2 -- sudo bash -c "$JOIN_CMD"
 ```
 
 **What `kubeadm join` does:**
@@ -111,4 +121,12 @@ On your host machine, retrieve the admin kubeconfig to interact with the cluster
 ```bash
 mkdir -p kubeconfig
 multipass exec cp-1 -- sudo cat /etc/kubernetes/admin.conf > kubeconfig/admin.yaml
+```
+
+## 6. Verify Cluster
+Check that all nodes are in `Ready` state (this may take a minute after installing a CNI like Flannel).
+
+```bash
+export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
+kubectl get nodes -o wide
 ```

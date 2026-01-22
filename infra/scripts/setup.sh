@@ -50,6 +50,7 @@ for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes --batch -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
         sudo apt-get update >/dev/null && sudo apt-get install -y containerd.io >/dev/null 2>&1
+        sudo mkdir -p /etc/containerd
         containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
         sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
         sudo systemctl restart containerd
