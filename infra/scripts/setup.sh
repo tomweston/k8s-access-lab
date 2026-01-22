@@ -66,7 +66,7 @@ for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
         sudo modprobe br_netfilter
         echo -e "overlay\nbr_netfilter" | sudo tee /etc/modules-load.d/k8s.conf >/dev/null
         echo -e "net.bridge.bridge-nf-call-iptables=1\nnet.bridge.bridge-nf-call-ip6tables=1\nnet.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/k8s.conf >/dev/null
-        sudo sysctl --system >/dev/null
+        sudo sysctl --system >/dev/null 2>&1
         sudo swapoff -a
 EOF
 done
@@ -76,17 +76,26 @@ log_step "Initializing Control Plane"
 CP_IP=$(multipass info $CP_VM | grep IPv4 | awk '{print $2}')
 log_info "Control Plane IP: $CP_IP"
 
-log_info "Running kubeadm init..."
-multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap >/dev/null 2>&1
+# Check if cluster is already initialized
+if multipass exec $CP_VM -- test -f /etc/kubernetes/admin.conf; then
+    log_warn "Cluster already initialized. Skipping kubeadm init."
+else
+    log_info "Running kubeadm init..."
+    multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap
+fi
 
 # 4. Get Kubeconfig
 
 # 4. Get Kubeconfig
 log_step "Retrieving Kubeconfig"
-mkdir -p ../../kubeconfig
-multipass exec $CP_VM -- sudo cat /etc/kubernetes/admin.conf > ../../kubeconfig/admin.yaml
-export KUBECONFIG=$(pwd)/../../kubeconfig/admin.yaml
-chmod 600 ../../kubeconfig/admin.yaml
+# Resolve project root relative to this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR/../.."
+
+mkdir -p "$PROJECT_ROOT/kubeconfig"
+multipass exec $CP_VM -- sudo cat /etc/kubernetes/admin.conf > "$PROJECT_ROOT/kubeconfig/admin.yaml"
+export KUBECONFIG="$PROJECT_ROOT/kubeconfig/admin.yaml"
+chmod 600 "$PROJECT_ROOT/kubeconfig/admin.yaml"
 log_info "Saved to kubeconfig/admin.yaml"
 
 # 5. Join Workers
@@ -94,8 +103,13 @@ log_step "Joining Workers to Cluster"
 JOIN_CMD=$(multipass exec $CP_VM -- sudo kubeadm token create --print-join-command)
 
 for vm in "${WORKER_VMS[@]}"; do
-    log_info "Joining $vm..."
-    multipass exec $vm -- sudo $JOIN_CMD >/dev/null 2>&1
+    # Check if node is already joined
+    if multipass exec $vm -- test -f /etc/kubernetes/kubelet.conf; then
+        log_warn "$vm already joined. Skipping."
+    else
+        log_info "Joining $vm..."
+        multipass exec $vm -- sudo $JOIN_CMD
+    fi
 done
 
 # 6. Verify
