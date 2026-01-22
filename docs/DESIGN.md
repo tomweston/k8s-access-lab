@@ -5,6 +5,22 @@ This document outlines the architectural decisions, security implementation, and
 
 ## 2. Architecture Components
 
+The lab is structured into three logical layers to demonstrate the transition from full administrative control to restricted application access.
+
+| Layer | Component | Responsibility |
+| :--- | :--- | :--- |
+| **1. Infra** | `multipass` + `kubeadm` | Provisions Ubuntu VMs and bootstraps the Kubernetes control plane. |
+| **2. Admin** | Pulumi (Admin Stack) | Installs platform services (CNI, Ingress, Cert-Manager) and handles RBAC/CSR bootstrapping. |
+| **3. App** | Pulumi (App Stack) | Deploys the Nginx workload using a **restricted** kubeconfig with namespace-scoped permissions. |
+
+```mermaid
+graph TD
+    A[Multipass VMs] --> B[Kubeadm Cluster]
+    B --> C[Admin Stack: RBAC + Platform]
+    C --> D[Restricted Kubeconfig]
+    D --> E[App Stack: Nginx]
+```
+
 ### Infrastructure (Layer 1)
 * **Hypervisor:** Multipass (Ubuntu VMs).
 * **Orchestrator:** Kubeadm (Standard "bare-metal" bootstrapping).
