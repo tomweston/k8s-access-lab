@@ -35,6 +35,9 @@ Initialize the virtual machines and bootstrap the `kubeadm` cluster.
 ```bash
 make infra
 
+# Verify VMs are running
+multipass list
+
 # Verify nodes are ready
 export KUBECONFIG=$(pwd)/kubeconfig/admin.yaml
 kubectl get nodes

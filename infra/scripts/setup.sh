@@ -36,8 +36,11 @@ done
 # 2. Configure VMs
 log_step "Configuring Nodes (Containerd + Kubeadm)"
 for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
-    log_info "Setting up dependencies on $vm..."
+    log_info "Setting up dependencies on $vm (this may take a few minutes)..."
     multipass exec $vm -- env K8S_VERSION="$K8S_VERSION" bash -s <<'EOF' >/dev/null 2>&1
+        # Wait for cloud-init to finish to avoid apt locks
+        cloud-init status --wait >/dev/null 2>&1
+        
         export DEBIAN_FRONTEND=noninteractive
         export K8S_VERSION="$K8S_VERSION"
         
