@@ -77,7 +77,9 @@ CP_IP=$(multipass info $CP_VM | grep IPv4 | awk '{print $2}')
 log_info "Control Plane IP: $CP_IP"
 
 log_info "Running kubeadm init..."
-multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap
+multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap >/dev/null 2>&1
+
+# 4. Get Kubeconfig
 
 # 4. Get Kubeconfig
 log_step "Retrieving Kubeconfig"
@@ -93,7 +95,7 @@ JOIN_CMD=$(multipass exec $CP_VM -- sudo kubeadm token create --print-join-comma
 
 for vm in "${WORKER_VMS[@]}"; do
     log_info "Joining $vm..."
-    multipass exec $vm -- sudo $JOIN_CMD
+    multipass exec $vm -- sudo $JOIN_CMD >/dev/null 2>&1
 done
 
 # 6. Verify
