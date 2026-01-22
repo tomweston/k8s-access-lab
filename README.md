@@ -29,6 +29,8 @@ make deps
 
 ## Quick Start
 
+> **Troubleshooting:** If the automated setup fails, refer to the [Manual Setup Guide](docs/MANUAL_SETUP.md) for step-by-step instructions.
+
 ### 1. Provision Cluster
 Initialize the virtual machines and bootstrap the `kubeadm` cluster.
 
