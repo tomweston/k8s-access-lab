@@ -12,6 +12,7 @@ Ensure you have the following installed:
 - [**multipass**](https://multipass.run/install) - VM management
 - [**kubectl**](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI
 - [**pulumi**](https://www.pulumi.com/docs/get-started/install/) - Infrastructure as Code
+- [**ngrok**](https://ngrok.com/download) - Public ingress tunnel (Optional)
 - [**Go 1.21+**](https://go.dev/doc/install) - Backend language
 
 **System Requirements:**
@@ -87,12 +88,23 @@ Access the deployed application directly via the NodePort.
    curl -v -H "Host: nginx.local" http://$NODE_IP:$NODE_PORT
    ```
 
-3. **Option B: Browser Access**
+3. **Option B: Browser Access (Local)**
    Add the following line to your `/etc/hosts` file (requires sudo):
+   ```bash
+   # Replace <NODE_IP> with the output from step 1
+   echo "<NODE_IP> nginx.local" | sudo tee -a /etc/hosts
    ```
-   <NODE_IP> nginx.local
+   Then open `http://nginx.local:<NODE_PORT>` in your browser.
+
+4. **Option C: Public URL (Easiest)**
+   If you have `ngrok` installed, you can expose the app without editing host files.
+   
+   Run this command (using the variables from Step 1):
+   ```bash
+   # Tunnel to the NodePort, rewriting the Host header to match our config
+   ngrok http http://$NODE_IP:$NODE_PORT --host-header=nginx.local
    ```
-   Replace `<NODE_IP>` with the actual IP from step 1. Then open `http://nginx.local:<NODE_PORT>` in your browser.
+   Then simply visit the URL that ngrok generates!
 
 ---
 
