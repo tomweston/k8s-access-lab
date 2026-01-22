@@ -49,7 +49,7 @@ for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
         echo "Installing containerd..."
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes --batch -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-        sudo apt-get update >/dev/null && sudo apt-get install -y containerd.io >/dev/null
+        sudo apt-get update >/dev/null && sudo apt-get install -y containerd.io >/dev/null 2>&1
         containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
         sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
         sudo systemctl restart containerd
@@ -58,7 +58,7 @@ for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
         echo "Installing kubeadm/kubectl..."
         curl -fsSL https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/Release.key | sudo gpg --dearmor --yes --batch -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
         echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
-        sudo apt-get update >/dev/null && sudo apt-get install -y kubelet kubeadm kubectl >/dev/null
+        sudo apt-get update >/dev/null && sudo apt-get install -y kubelet kubeadm kubectl >/dev/null 2>&1
 
         # Sysctl & modules
         echo "Configuring sysctl..."
