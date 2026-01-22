@@ -37,32 +37,36 @@ done
 log_step "Configuring Nodes (Containerd + Kubeadm)"
 for vm in "$CP_VM" "${WORKER_VMS[@]}"; do
     log_info "Setting up dependencies on $vm (this may take a few minutes)..."
-    multipass exec $vm -- env K8S_VERSION="$K8S_VERSION" bash -s <<'EOF' >/dev/null 2>&1
+    multipass exec $vm -- env K8S_VERSION="$K8S_VERSION" bash -s <<'EOF'
         # Wait for cloud-init to finish to avoid apt locks
+        echo "Waiting for cloud-init to finish..."
         cloud-init status --wait >/dev/null 2>&1
         
         export DEBIAN_FRONTEND=noninteractive
         export K8S_VERSION="$K8S_VERSION"
         
         # Install containerd
+        echo "Installing containerd..."
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes --batch -o /usr/share/keyrings/docker-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
-        sudo apt-get update && sudo apt-get install -y containerd.io
-        containerd config default | sudo tee /etc/containerd/config.toml
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+        sudo apt-get update >/dev/null && sudo apt-get install -y containerd.io >/dev/null
+        containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
         sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
         sudo systemctl restart containerd
 
         # Install kubeadm
+        echo "Installing kubeadm/kubectl..."
         curl -fsSL https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/Release.key | sudo gpg --dearmor --yes --batch -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-        sudo apt-get update && sudo apt-get install -y kubelet kubeadm kubectl
+        echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
+        sudo apt-get update >/dev/null && sudo apt-get install -y kubelet kubeadm kubectl >/dev/null
 
         # Sysctl & modules
+        echo "Configuring sysctl..."
         sudo modprobe overlay
         sudo modprobe br_netfilter
-        echo -e "overlay\nbr_netfilter" | sudo tee /etc/modules-load.d/k8s.conf
-        echo -e "net.bridge.bridge-nf-call-iptables=1\nnet.bridge.bridge-nf-call-ip6tables=1\nnet.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/k8s.conf
-        sudo sysctl --system
+        echo -e "overlay\nbr_netfilter" | sudo tee /etc/modules-load.d/k8s.conf >/dev/null
+        echo -e "net.bridge.bridge-nf-call-iptables=1\nnet.bridge.bridge-nf-call-ip6tables=1\nnet.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/k8s.conf >/dev/null
+        sudo sysctl --system >/dev/null
         sudo swapoff -a
 EOF
 done
@@ -73,7 +77,7 @@ CP_IP=$(multipass info $CP_VM | grep IPv4 | awk '{print $2}')
 log_info "Control Plane IP: $CP_IP"
 
 log_info "Running kubeadm init..."
-multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap >/dev/null 2>&1
+multipass exec $CP_VM -- sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$CP_IP --ignore-preflight-errors=Swap
 
 # 4. Get Kubeconfig
 log_step "Retrieving Kubeconfig"
@@ -89,7 +93,7 @@ JOIN_CMD=$(multipass exec $CP_VM -- sudo kubeadm token create --print-join-comma
 
 for vm in "${WORKER_VMS[@]}"; do
     log_info "Joining $vm..."
-    multipass exec $vm -- sudo $JOIN_CMD >/dev/null 2>&1
+    multipass exec $vm -- sudo $JOIN_CMD
 done
 
 # 6. Verify

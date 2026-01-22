@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Resolve project root relative to this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR/../.."
+
 echo "=== Teardown ==="
 echo "This will delete all VMs (cp-1, worker-1, worker-2) and local configs. Are you sure? (y/N)"
 read -r confirm
@@ -14,17 +18,15 @@ multipass delete cp-1 worker-1 worker-2 --purge || true
 
 echo "Cleaning up files..."
 
-# Remove generated kubeconfigs (keep README.md)
-# Assuming script is run from infra/scripts/
-rm -f ../../kubeconfig/*.yaml
-rm -f ../../kubeconfig/*.kubeconfig
+# Remove generated kubeconfigs
+rm -f "$PROJECT_ROOT/kubeconfig/"*.yaml
+rm -f "$PROJECT_ROOT/kubeconfig/"*.kubeconfig
 
-# Remove CSR directory (relative to root)
-rm -rf ../../csr/
+# Remove CSR directory
+rm -rf "$PROJECT_ROOT/csr/"
 
 # Remove any root-level leftovers (legacy)
-rm -f ../../admin.conf
-rm -f ../../nginx-deployer.kubeconfig
-
+rm -f "$PROJECT_ROOT/admin.conf"
+rm -f "$PROJECT_ROOT/nginx-deployer.kubeconfig"
 
 echo "Done."
