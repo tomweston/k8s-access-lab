@@ -1,7 +1,7 @@
 .PHONY: all deps infra admin app tunnel clean
 
 # Default target
-all: deps infra admin app
+all: deps infra
 
 # 0. Prerequisites
 deps:
@@ -13,7 +13,6 @@ deps:
 		echo "  - multipass: https://multipass.run/install"; \
 		echo "  - kubectl:   https://kubernetes.io/docs/tasks/tools/"; \
 		echo "  - pulumi:    https://www.pulumi.com/docs/get-started/install/"; \
-		echo "  - ngrok:     https://ngrok.com/download"; \
 		echo "  - go:        https://go.dev/doc/install"; \
 	fi
 
@@ -22,24 +21,6 @@ infra:
 	@echo "Provisioning Infrastructure..."
 	chmod +x infra/scripts/setup.sh
 	./infra/scripts/setup.sh
-
-# 2. Admin Stack (Platform + RBAC)
-admin:
-	@echo "Deploying Admin Stack..."
-	cd infra/admin && pulumi stack select admin || pulumi stack init admin
-	cd infra/admin && pulumi config set kubeconfig ../../kubeconfig/admin.yaml
-	cd infra/admin && pulumi up --yes
-	@echo "Exporting restricted kubeconfig..."
-	cd infra/admin && pulumi stack output nginxDeployerKubeconfig --show-secrets > ../../kubeconfig/nginx-deployer.yaml
-
-# 3. App Stack (Nginx)
-app:
-	@echo "Deploying App Stack..."
-	cd apps/nginx && pulumi stack select app || pulumi stack init app
-	cd apps/nginx && pulumi config set kubeconfig ../../kubeconfig/nginx-deployer.yaml
-	cd apps/nginx && pulumi config set host $$(whoami)-k8s-lab.ngrok-free.app
-	cd apps/nginx && pulumi config set sslRedirect false
-	cd apps/nginx && pulumi up --yes
 
 # 4. Access (Tunnel)
 tunnel:

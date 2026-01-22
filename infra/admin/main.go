@@ -119,6 +119,9 @@ func main() {
 					},
 					"hostNetwork":              pulumi.Bool(true),
 					"watchIngressWithoutClass": pulumi.Bool(true),
+					"config": pulumi.Map{
+						"large-client-header-buffers": pulumi.String("4 32k"),
+					},
 				},
 			},
 		}, opts...)

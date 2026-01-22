@@ -12,7 +12,6 @@ Ensure you have the following installed:
 - [**multipass**](https://multipass.run/install) - VM management
 - [**kubectl**](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI
 - [**pulumi**](https://www.pulumi.com/docs/get-started/install/) - Infrastructure as Code
-- [**ngrok**](https://ngrok.com/download) - Public ingress tunnel
 - [**Go 1.21+**](https://go.dev/doc/install) - Backend language
 
 **System Requirements:**
@@ -49,22 +48,51 @@ kubectl get nodes
 Deploy core platform components and generate the restricted deployer credentials.
 
 ```bash
-make admin
+cd infra/admin
+pulumi stack init admin
+pulumi config set kubeconfig ../../kubeconfig/admin.yaml
+pulumi up --yes
+
+# Export restricted kubeconfig
+pulumi stack output nginxDeployerKubeconfig --show-secrets > ../../kubeconfig/nginx-deployer.yaml
+cd ../..
 ```
 
 ### 3. Deploy Application
 Using the **restricted** credentials, deploy the Nginx application.
 
 ```bash
-make app
+cd apps/nginx
+pulumi stack init app
+pulumi config set kubeconfig ../../kubeconfig/nginx-deployer.yaml
+pulumi config set host nginx.local
+pulumi config set sslRedirect false
+pulumi up --yes
+cd ../..
 ```
 
-### 4. Access via ngrok
-Expose the ingress controller to the internet to verify the deployment.
+### 4. Access Application
+Access the deployed application directly via the NodePort.
 
-```bash
-make tunnel
-```
+1. **Get the Node IP and Ingress Port:**
+   ```bash
+   export NODE_IP=$(multipass info cp-1 | grep IPv4 | awk '{print $2}')
+   export NODE_PORT=$(kubectl --kubeconfig=kubeconfig/admin.yaml get svc -n ingress-nginx -l app.kubernetes.io/component=controller -o jsonpath='{.items[0].spec.ports[?(@.port==80)].nodePort}')
+   echo "Ingress is listening on $NODE_IP:$NODE_PORT"
+   ```
+
+2. **Option A: Quick Test (curl)**
+   Verify connectivity from your terminal:
+   ```bash
+   curl -v -H "Host: nginx.local" http://$NODE_IP:$NODE_PORT
+   ```
+
+3. **Option B: Browser Access**
+   Add the following line to your `/etc/hosts` file (requires sudo):
+   ```
+   <NODE_IP> nginx.local
+   ```
+   Replace `<NODE_IP>` with the actual IP from step 1. Then open `http://nginx.local:<NODE_PORT>` in your browser.
 
 ---
 

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nginx on Kubernetes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="max-w-2xl w-full bg-white p-8 rounded-lg shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <svg class="w-32 h-32 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 19h20L12 2zm0 3.8L18.5 17H5.5L12 5.8z"/>
+            </svg>
+        </div>
+        
+        <div class="border-b border-gray-200 pb-4 mb-6">
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">
+                Nginx <span class="text-blue-600">@</span> Kubernetes
+            </h1>
+            <p class="text-gray-500 mt-2 text-sm font-medium uppercase tracking-wide">Infrastructure Access Lab</p>
+        </div>
+
+            <div class="space-y-6 relative z-10">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Deployed Via</p>
+                    <p class="font-bold text-gray-800 text-lg">Kubeadm</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase">Orchestration</p>
+                    <p class="font-bold text-gray-800 text-lg">Pulumi</p>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-5 rounded-md border border-blue-100 flex items-center space-x-4">
+                <div class="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+                <div>
+                    <p class="text-blue-900 font-semibold">System Status: Operational</p>
+                    <p class="text-blue-700 text-sm">Namespace: <span class="font-mono font-bold bg-blue-200 px-1 rounded">app-nginx</span></p>
+                </div>
+            </div>
+
+            <div class="text-center pt-4">
+                <p class="text-xs text-gray-400">
+                    Securely deployed by <span class="font-mono text-gray-600">nginx-deployer</span> (RBAC Restricted)
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
