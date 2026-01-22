@@ -26,11 +26,11 @@ log_warn() {
 # 1. Provision VMs
 log_step "Provisioning Virtual Machines"
 log_info "Launching Control Plane ($CP_VM)..."
-multipass launch 22.04 --name $CP_VM --cpus 2 --memory 2G --disk 5G 2>/dev/null || log_warn "$CP_VM already exists"
+multipass launch 22.04 --name $CP_VM --cpus 2 --memory 2G --disk 10G 2>/dev/null || log_warn "$CP_VM already exists"
 
 for vm in "${WORKER_VMS[@]}"; do
     log_info "Launching Worker ($vm)..."
-    multipass launch 22.04 --name $vm --cpus 1 --memory 1.5G --disk 5G 2>/dev/null || log_warn "$vm already exists"
+    multipass launch 22.04 --name $vm --cpus 1 --memory 2G --disk 10G 2>/dev/null || log_warn "$vm already exists"
 done
 
 # 2. Configure VMs
