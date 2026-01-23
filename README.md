@@ -101,7 +101,8 @@ Access the deployed application directly via the NodePort.
    
    Run this command (using the variables from Step 1):
    ```bash
-   # Tunnel to the NodePort, rewriting the Host header to match our config
+   # We use --host-header=nginx.local so ngrok rewrites the header for us.
+   # This means you DO NOT need to update the Pulumi stack with the ngrok URL.
    ngrok http http://$NODE_IP:$NODE_PORT --host-header=nginx.local
    ```
    Then simply visit the URL that ngrok generates!

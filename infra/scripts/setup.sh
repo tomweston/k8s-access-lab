@@ -86,8 +86,6 @@ else
 fi
 
 # 4. Get Kubeconfig
-
-# 4. Get Kubeconfig
 log_step "Retrieving Kubeconfig"
 # Resolve project root relative to this script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
